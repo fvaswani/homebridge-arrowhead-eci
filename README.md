@@ -79,8 +79,10 @@ registry will not work yet.
 
 For HOOBS, use the manual package installation process appropriate to your
 installed HOOBS version and bridge. A global npm installation may not target a
-HOOBS-managed bridge. This release does not claim a tested HOOBS installer path
-or catalog entry.
+HOOBS-managed bridge. The pilot used a dedicated bridge, installed the tarball
+in that bridge's `node_modules`, and saved the platform through HOOBS's configuration
+manager. There is no automated HOOBS installer or catalog entry yet. Do not edit
+an existing bridge containing unrelated accessories for an initial trial.
 
 ## Configuration
 
@@ -115,6 +117,7 @@ numbers. The environment variable is only needed if you later enable controls.
 | `host` | Local address of the Serial over IP interface, such as the EC-IoT module. Configuring it starts a connection when Homebridge starts. |
 | `port` | Serial over IP TCP port, normally `9000`. |
 | `area` | Area to observe, normally `1`. It does not limit the scope of alarm commands. |
+| `sparseStatus` | Defaults to `false`. Opt-in five-second initialization for firmware with sparse status replies; see the limitations below. |
 | `enableControl` | Defaults to `false`. Enables user-requested arm and disarm commands when `true`. |
 | `userNumber` | Panel user number used for controls. |
 | `pinEnvironment` | Name of the environment variable containing the panel PIN. |
