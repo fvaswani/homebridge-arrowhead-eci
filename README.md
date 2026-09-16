@@ -5,7 +5,8 @@ Serial over IP networking, such as an EC-IoT network module. Configured zones
 appear as motion or contact sensors. No Home Assistant, cloud account, or Python
 runtime is required.
 
-**Version 0.1.0-alpha.1 is experimental. No real alarm panel has been tested.**
+**Experimental. The first hardware test found incomplete startup status reporting.**
+The published 0.1.0-alpha.1 package also needs a connection startup timing fix.
 HOOBS is an intended target, but this release has not been certified or verified
 on a live HOOBS installation. It is not listed in the npm registry or claimed to
 be available in the HOOBS plugin catalog.
@@ -24,7 +25,8 @@ be available in the HOOBS plugin catalog.
 
 The upstream integration describes firmware 10.3.50 and later. That is an
 upstream compatibility statement, not hardware validation for this plugin.
-Firmware 10.3.61 has not been tested here.
+A partial monitoring test on firmware 10.3.61 confirmed MODE 4 and live zone
+events, but did not validate complete startup state. See [hardware validation](docs/hardware-validation.md).
 
 **Arm and disarm commands affect the whole panel and all its areas.** Setting
 `area` chooses the area whose status is observed; it does not restrict commands
@@ -32,7 +34,7 @@ to that area. Do not enable this plugin on a multi-area installation.
 
 ## Validation status
 
-The 32 automated tests cover the TCP protocol, actual Homebridge HAP services,
+The automated tests cover the TCP protocol, actual Homebridge HAP services,
 and an end-to-end simulator connection. They pass with Homebridge 1.8.4 on Node
 20 and Homebridge 2.4.0 on Node 22 and 24. Both Homebridge versions also load and
 register the packaged platform in an isolated startup check. These are software

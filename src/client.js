@@ -19,7 +19,8 @@ function positiveInteger(value, name, max = 2147483647) {
 /** Single-area MODE 4 client. All errors intentionally omit received text and credentials. */
 class ArrowheadClient extends EventEmitter {
   constructor({ host, port = 9000, area = 1, commandTimeoutMs = 5000,
-    reconnectDelayMs = 1000, heartbeatMs = 30000, staleTimeoutMs = 90000 } = {}) {
+    reconnectDelayMs = 1000, heartbeatMs = 30000, staleTimeoutMs = 90000,
+    connectSettleMs = 1000 } = {}) {
     super();
     if (typeof host !== 'string' || host.length > 253 ||
         (!net.isIP(host) && !host.split('.').every(label =>
@@ -28,8 +29,8 @@ class ArrowheadClient extends EventEmitter {
     positiveInteger(port, 'port', 65535);
     positiveInteger(area, 'area', 32);
     for (const [name, value] of Object.entries({ commandTimeoutMs, reconnectDelayMs,
-      heartbeatMs, staleTimeoutMs })) positiveInteger(value, name);
-    this.options = { host, port, area, commandTimeoutMs, reconnectDelayMs, heartbeatMs, staleTimeoutMs };
+      heartbeatMs, staleTimeoutMs, connectSettleMs })) positiveInteger(value, name);
+    this.options = { host, port, area, commandTimeoutMs, reconnectDelayMs, heartbeatMs, staleTimeoutMs, connectSettleMs };
     this.connected = false;
     this.state = emptyState();
     this._running = false;
@@ -39,6 +40,7 @@ class ArrowheadClient extends EventEmitter {
     this._retry = null;
     this._health = null;
     this._connectTimer = null;
+    this._settleTimer = null;
     this._buffer = '';
     this._attempt = 0;
     this._freshness = new Map();
@@ -92,21 +94,27 @@ class ArrowheadClient extends EventEmitter {
     socket.on('connect', () => {
       if (this._socket !== socket) return;
       clearTimeout(this._connectTimer);
-      // Upstream firmware may acknowledge MODE 4 with bare OK. It is accepted
-      // only in this transaction; generic OK never acknowledges a control.
-      this._request('MODE 4', /^(?:MODE 4|OK(?: MODE(?: 4)?)?)$/i).then(() => {
+      // EC-i TCP modules can discard commands sent before their welcome phase
+      // completes. Match the upstream client's one-second initialization wait.
+      this._settleTimer = setTimeout(() => {
+        this._settleTimer = null;
         if (this._socket !== socket || !this._running) return;
-        this._lastMessage = Date.now();
-        this._lastHeartbeat = Date.now();
-        this._attempt = 0;
-        socket.write('STATUS\n');
-        this.connected = true;
-        this.emit('availability', true);
-        this._health = setInterval(() => this._tick(), Math.max(5,
-          Math.min(1000, this.options.heartbeatMs, this.options.staleTimeoutMs / 4)));
-      }).catch(() => {
-        if (this._socket === socket) this._disconnect(new Error('MODE 4 negotiation failed'));
-      });
+        // Upstream firmware may acknowledge MODE 4 with bare OK. It is accepted
+        // only in this transaction; generic OK never acknowledges a control.
+        this._request('MODE 4', /^(?:MODE 4|OK(?: MODE(?: 4)?)?)$/i).then(() => {
+          if (this._socket !== socket || !this._running) return;
+          this._lastMessage = Date.now();
+          this._lastHeartbeat = Date.now();
+          this._attempt = 0;
+          socket.write('STATUS\n');
+          this.connected = true;
+          this.emit('availability', true);
+          this._health = setInterval(() => this._tick(), Math.max(5,
+            Math.min(1000, this.options.heartbeatMs, this.options.staleTimeoutMs / 4)));
+        }).catch(() => {
+          if (this._socket === socket) this._disconnect(new Error('MODE 4 negotiation failed'));
+        });
+      }, this.options.connectSettleMs);
     });
   }
 
@@ -244,6 +252,8 @@ class ArrowheadClient extends EventEmitter {
     const socket = this._socket;
     this._socket = null;
     clearTimeout(this._connectTimer);
+    clearTimeout(this._settleTimer);
+    this._settleTimer = null;
     clearInterval(this._health);
     this._health = null;
     const active = this._active;

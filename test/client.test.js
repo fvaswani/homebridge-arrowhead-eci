@@ -36,7 +36,7 @@ async function simulator(t, handler, options = {}) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const client = new ArrowheadClient({ host: '127.0.0.1', port: server.address().port,
     commandTimeoutMs: 150, reconnectDelayMs: 30, heartbeatMs: 1000,
-    staleTimeoutMs: 3000, ...options });
+    staleTimeoutMs: 3000, connectSettleMs: 10, ...options });
   t.after(async () => {
     client.stop();
     for (const socket of sockets) socket.destroy();
@@ -335,4 +335,42 @@ test('refused connections are handled without requiring an error listener', asyn
   await until(() => unavailable >= 2);
   assert.equal(client.connected, false);
   assert.equal(client.state.mode, 'unknown');
+});
+
+test('waits for the TCP module to initialize before sending its first command', async t => {
+  const sockets = [];
+  const commands = [];
+  const server = net.createServer(socket => {
+    sockets.push(socket);
+    socket.on('error', () => {});
+    const readyAt = Date.now() + 200;
+    socket.write('\r\nWelcome\r\n');
+    socket.on('data', data => {
+      for (const line of data.toString().trim().split('\n')) {
+        commands.push(line);
+        if (Date.now() < readyAt) continue;
+        normalHandshake(line, socket);
+      }
+    });
+  });
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const client = new ArrowheadClient({ host: '127.0.0.1', port: server.address().port,
+    commandTimeoutMs: 150, reconnectDelayMs: 60000 });
+  t.after(async () => {
+    client.stop();
+    for (const socket of sockets) socket.destroy();
+    await new Promise(resolve => server.close(resolve));
+  });
+  client.start();
+  await until(() => client.state.mode === 'disarmed');
+  assert.deepEqual(commands, ['MODE 4', 'STATUS']);
+});
+
+test('stopping during connection initialization cancels the pending handshake', async t => {
+  const { client, sockets, lines } = await simulator(t, normalHandshake, { connectSettleMs: 100 });
+  await until(() => sockets.length === 1);
+  client.stop();
+  await sleep(150);
+  assert.deepEqual(lines, []);
+  assert.equal(client.connected, false);
 });

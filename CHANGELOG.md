@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Wait one second after a TCP connection before MODE 4 negotiation. A live EC-i
+  module discarded commands sent immediately while its welcome phase completed.
+- Cancel the pending handshake when the client stops or disconnects.
+- Add regression tests for delayed module readiness and stopping during startup.
+- Document partial firmware 10.3.61 hardware results and the unresolved startup
+  state limitation. No live HOOBS deployment is validated yet.
+
 ## 0.1.0-alpha.1
 
 Initial experimental release.
