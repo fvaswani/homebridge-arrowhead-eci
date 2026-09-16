@@ -1,0 +1,25 @@
+{
+  "pluginAlias": "ArrowheadECi",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Experimental EC-i integration for single-area installations. Controls affect the entire panel. Start with controls disabled. Requires local Serial over IP with MODE 4; communication is unencrypted. No real-panel validation yet.",
+  "schema": {
+    "type": "object",
+    "required": ["host"],
+    "properties": {
+      "name": {"title":"Name", "type":"string", "default":"Arrowhead Alarm", "minLength":1, "maxLength":64},
+      "host": {"title":"Alarm IP address or hostname", "type":"string", "minLength":1, "maxLength":253, "pattern":"^[a-zA-Z0-9.:_-]+$"},
+      "port": {"title":"Serial over IP port", "type":"integer", "default":9000, "minimum":1, "maximum":65535},
+      "area": {"title":"Single alarm area to monitor", "type":"integer", "default":1, "minimum":1, "maximum":32},
+      "enableControl": {"title":"Enable whole-panel arm/disarm controls", "type":"boolean", "default":false},
+      "userNumber": {"title":"Alarm user number", "type":"integer", "default":1, "minimum":1, "maximum":2000},
+      "pin": {"title":"Alarm PIN (stored in bridge configuration)", "type":"string", "format":"password", "pattern":"^([0-9]{3,12})?$"},
+      "pinEnvironment": {"title":"Alternatively: environment variable holding PIN", "type":"string", "pattern":"^[A-Za-z_][A-Za-z0-9_]*$"},
+      "zones": {"title":"Zones", "type":"array", "maxItems":148, "items": {"type":"object", "required":["id","name"], "properties": {
+        "id":{"title":"Zone number", "type":"integer", "minimum":1, "maximum":248},
+        "name":{"title":"Name", "type":"string", "minLength":1, "maxLength":64},
+        "type":{"title":"Sensor type", "type":"string", "enum":["motion","contact"], "default":"motion"}
+      }}}
+    }
+  }
+}

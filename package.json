@@ -1,0 +1,51 @@
+{
+  "name": "homebridge-arrowhead-eci",
+  "version": "0.1.0-alpha.1",
+  "description": "Experimental local Arrowhead EC-i alarm integration for Homebridge and HOOBS",
+  "main": "index.js",
+  "license": "MIT",
+  "author": "Farid Vaswani",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fvaswani/homebridge-arrowhead-eci.git"
+  },
+  "homepage": "https://github.com/fvaswani/homebridge-arrowhead-eci#readme",
+  "bugs": {
+    "url": "https://github.com/fvaswani/homebridge-arrowhead-eci/issues"
+  },
+  "keywords": [
+    "homebridge-plugin",
+    "hoobs",
+    "arrowhead",
+    "eci",
+    "alarm",
+    "homekit"
+  ],
+  "engines": {
+    "node": ">=20",
+    "homebridge": ">=1.8.4 <3"
+  },
+  "devDependencies": {
+    "homebridge": "1.8.4"
+  },
+  "files": [
+    "index.js",
+    "src/",
+    "config.schema.json",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "SECURITY.md",
+    "CHANGELOG.md",
+    "examples/"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node --check index.js && node --check src/config.js && node --check src/platform.js && node --check src/client.js && npm test",
+    "prepack": "npm run check"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "alpha"
+  }
+}

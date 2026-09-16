@@ -1,0 +1,9 @@
+node_modules/
+*.tgz
+coverage/
+.env
+.env.*
+config.json
+!examples/config.json
+*.log
+.DS_Store

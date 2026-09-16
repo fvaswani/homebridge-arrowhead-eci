@@ -1,0 +1,21 @@
+{
+  "platforms": [
+    {
+      "platform": "ArrowheadECi",
+      "name": "Arrowhead Alarm",
+      "host": "192.0.2.10",
+      "port": 9000,
+      "area": 1,
+      "enableControl": false,
+      "userNumber": 1,
+      "pinEnvironment": "ARROWHEAD_PIN",
+      "zones": [
+        {
+          "id": 1,
+          "name": "Hallway",
+          "type": "motion"
+        }
+      ]
+    }
+  ]
+}
