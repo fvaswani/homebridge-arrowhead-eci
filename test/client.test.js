@@ -210,6 +210,30 @@ test('control timeout closes connection, rejects queued commands, resets state a
   assert.equal(lines.filter(r => r.line.startsWith('DISARM')).length, 0);
 });
 
+test('queue wait consumes the command deadline and expired controls are never sent or replayed', async t => {
+  const timers = [];
+  t.after(() => timers.forEach(clearTimeout));
+  const { client, lines, sockets } = await simulator(t, (line, socket) => {
+    normalHandshake(line, socket);
+    if (['ARMAWAY', 'ARMSTAY', 'DISARM'].includes(line.split(' ')[0])) {
+      timers.push(setTimeout(() => {
+        if (!socket.destroyed) socket.write(`OK ${line.split(' ')[0]}\n`);
+      }, 150));
+    }
+  }, { commandTimeoutMs: 400 });
+  await until(() => client.state.mode === 'disarmed');
+  const results = await Promise.allSettled([
+    client.control('away'), client.control('home'),
+    client.control('disarmed', 1, '1234'), client.control('away'),
+  ]);
+  assert.deepEqual(results.map(result => result.status),
+    ['fulfilled', 'fulfilled', 'rejected', 'rejected']);
+  await until(() => sockets.length === 2 && client.connected);
+  await sleep(200);
+  assert.deepEqual(lines.filter(({ line }) => /^(ARMAWAY|ARMSTAY|DISARM)/.test(line))
+    .map(({ line }) => line), ['ARMAWAY', 'ARMSTAY', 'DISARM 1 1234']);
+});
+
 test('disconnect invalidates confirmed fields and stop prevents further reconnects', async t => {
   const { client, sockets } = await simulator(t, normalHandshake);
   await until(() => client.state.mode === 'disarmed');

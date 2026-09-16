@@ -156,6 +156,11 @@ send the corresponding panel request when controls are enabled; disarm sends a
 disarm request. A command acknowledgement means the request was accepted, not
 that arming or disarming has completed. Control acknowledgements do not change the current state. Night arming is not supported in this initial scope.
 
+Each control request has a five-second deadline, including time waiting in the
+queue. If it expires, the connection is reset and all outstanding requests fail;
+queued commands are discarded. A command already sent may still have taken
+effect, so check the keypad or Elite app before retrying.
+
 Unknown or disconnected state produces a HomeKit communication error. Valid
 status replies keep unchanged event-driven readings available; loss of qualified
 status replies for 90 seconds invalidates the connection. A disconnected panel

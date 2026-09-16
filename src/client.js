@@ -2,6 +2,7 @@
 
 const net = require('node:net');
 const { EventEmitter } = require('node:events');
+const { performance } = require('node:perf_hooks');
 
 const MAX_LINE = 4096;
 const MAX_QUEUE = 16;
@@ -127,7 +128,14 @@ class ArrowheadClient extends EventEmitter {
     if (!this._socket || this._socket.destroyed) return Promise.reject(new Error('Panel unavailable'));
     if (this._queue.length >= MAX_QUEUE) return Promise.reject(new Error('Command queue full'));
     return new Promise((resolve, reject) => {
-      this._queue.push({ line, acknowledgement, resolve, reject, timer: null });
+      const request = { line, acknowledgement, resolve, reject,
+        deadline: performance.now() + this.options.commandTimeoutMs, timer: null };
+      // Queue wait and panel acknowledgement share one budget. On expiry,
+      // discard all work: a late reply cannot safely identify a later request.
+      request.timer = setTimeout(() => {
+        this._disconnect(new Error('Command timed out; result unknown'));
+      }, this.options.commandTimeoutMs);
+      this._queue.push(request);
       this._pump();
     });
   }
@@ -136,10 +144,11 @@ class ArrowheadClient extends EventEmitter {
     if (this._active || !this._socket || !this._queue.length) return;
     const request = this._queue.shift();
     this._active = request;
-    request.timer = setTimeout(() => {
-      // A late reply cannot safely be associated with a later request.
+    // An overdue timer may not have run yet after an event-loop delay.
+    if (performance.now() >= request.deadline) {
       this._disconnect(new Error('Command timed out; result unknown'));
-    }, this.options.commandTimeoutMs);
+      return;
+    }
     this._socket.write(`${request.line}\n`);
     request.line = null;
   }
@@ -180,6 +189,10 @@ class ArrowheadClient extends EventEmitter {
     }
     const request = this._active;
     if (request && request.acknowledgement.test(line)) {
+      if (performance.now() >= request.deadline) {
+        this._disconnect(new Error('Command timed out; result unknown'));
+        return;
+      }
       clearTimeout(request.timer);
       this._active = null;
       request.resolve();

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Include queue wait in the five-second control deadline so expired arm/disarm
+  commands are discarded before HomeKit times out and are never replayed.
 - Mask the PIN field in the HOOBS 5 visual editor using its explicit password widget.
 - Document the HOOBS 5.1.8 blank configuration page for plugins missing from its catalogue.
 - Confirm owner-completed Apple Home pairing and one supervised Away/Off

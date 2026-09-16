@@ -8,8 +8,8 @@ const { HomebridgeAPI } = require('./helpers/homebridge');
 const { ArrowheadPlatform } = require('../src/platform');
 const { ArrowheadClient } = require('../src/client');
 
-async function until(predicate) {
-  const deadline = Date.now() + 2000;
+async function until(predicate, timeout = 2000) {
+  const deadline = Date.now() + timeout;
   while (!predicate()) {
     if (Date.now() >= deadline) assert.fail('Timed out waiting for integration state');
     await sleep(5);
@@ -107,4 +107,64 @@ test('actual HAP services, platform and TCP client exchange confirmed panel stat
     assert.equal(platform.client.connected, false);
     await assert.rejects(current.handleGetRequest());
     await assert.rejects(motion.handleGetRequest());
+  });
+
+test('queued controls fail before the HomeKit timeout instead of executing afterwards',
+  { timeout: 15000 }, async t => {
+    const commands = [], sockets = new Set(), timers = [];
+    const server = net.createServer(socket => {
+      sockets.add(socket);
+      socket.on('error', () => {});
+      socket.on('close', () => sockets.delete(socket));
+      let buffer = '';
+      socket.on('data', data => {
+        buffer += data;
+        let end;
+        while ((end = buffer.indexOf('\n')) !== -1) {
+          const line = buffer.slice(0, end);
+          buffer = buffer.slice(end + 1);
+          if (line === 'MODE 4') socket.write('OK MODE 4\n');
+          else if (line === 'STATUS') socket.write('OK Status\nRO1\nAR1\nD1\n');
+          else {
+            const command = line.split(' ')[0];
+            commands.push(command);
+            timers.push(setTimeout(() => {
+              if (!socket.destroyed) socket.write(`OK ${command}\n`);
+            }, 4000));
+          }
+        }
+      });
+    });
+    await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+    const api = new HomebridgeAPI(), registered = [];
+    api.registerPlatformAccessories = (_plugin, _platform, accessories) => registered.push(...accessories);
+    api.unregisterPlatformAccessories = () => {};
+    api.updatePlatformAccessories = () => {};
+    const platform = new ArrowheadPlatform({ info() {}, warn() {}, error() {} }, {
+      host: '127.0.0.1', port: server.address().port, enableControl: true, pin: '1234',
+    }, api);
+    t.after(async () => {
+      api.emit('shutdown');
+      timers.forEach(clearTimeout);
+      for (const socket of sockets) socket.destroy();
+      await new Promise(resolve => server.close(resolve));
+    });
+    api.emit('didFinishLaunching');
+    await until(() => platform.client.state.mode === 'disarmed');
+    const accessory = registered[0]._associatedHAPAccessory;
+    const target = registered[0].getService(api.hap.Service.SecuritySystem)
+      .getCharacteristic(api.hap.Characteristic.SecuritySystemTargetState);
+    // Assign IDs without publishing a bridge or requiring HomeKit pairing.
+    accessory.aid = 1;
+    target.iid = 10;
+    const results = await Promise.all([1, 0, 3, 1].map(value => new Promise(resolve => {
+      accessory.handleSetCharacteristics({ remoteAddress: '127.0.0.1' }, {
+        characteristics: [{ aid: 1, iid: 10, value }],
+      }, (error, response) => resolve({ error, status: response?.characteristics[0]?.status }));
+    })));
+    assert.ok(results.every(result => !result.error));
+    const failure = api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE;
+    assert.deepEqual(results.map(result => result.status), [0, failure, failure, failure]);
+    await until(() => platform.client.connected, 4000);
+    assert.deepEqual(commands, ['ARMAWAY', 'ARMSTAY']);
   });
