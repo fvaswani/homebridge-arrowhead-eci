@@ -30,7 +30,12 @@ Test date: 2026-09-16. EC-i firmware 10.3.61 with an EC-IoT module.
 - HOOBS displayed the alarm as Disarmed and exposed all three motion zones.
 - Existing bridge records were unchanged and their processes remained running.
 - Idle monitoring remained connected beyond the previous 90-second expiry.
-- Apple Home pairing and motion display within Apple Home are pending.
+- The owner completed Apple Home pairing and supplied screenshots of the alarm
+  and motion accessories. Room assignment and motion reset in Apple Home still
+  need user verification.
+- The HOOBS visual configuration form was verified after a local client-only
+  catalogue fallback. Its PIN field requires the explicit password widget
+  included in the current source; the alpha.2 tarball predates this schema fix.
 
 ## Interpretation and limits
 
@@ -45,7 +50,7 @@ missing polls invalidate the connection even when unrelated events arrive.
 There is no documented MODE 4 end-of-dump marker, so a truncated but partly valid
 reply remains a limitation. This is not manufacturer-certified synchronization.
 Stay mode, real alarm/siren events, tamper and battery states, plugin-issued
-controls and Apple Home pairing remain unvalidated.
+controls remain unvalidated.
 
 ## References
 

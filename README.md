@@ -8,8 +8,9 @@ runtime is required.
 **Experimental. Firmware 10.3.61 sends sparse startup status replies.**
 Version 0.1.0-alpha.2 includes connection timing and opt-in sparse status fixes.
 Monitoring is running on one HOOBS 5.1.8 / Homebridge 1.8.4 installation with
-Node 20.19.1. Apple Home pairing and plugin-issued controls remain unvalidated. It is not listed in the npm registry or claimed to
-be available in the HOOBS plugin catalog.
+Node 20.19.1. Apple Home pairing is confirmed; plugin-issued controls remain
+unvalidated. It is not listed in the npm registry or claimed to be available
+in the HOOBS plugin catalog.
 
 ## Supported scope
 
@@ -40,8 +41,8 @@ and an end-to-end simulator connection. They pass with Homebridge 1.8.4 on Node
 20 and Homebridge 2.4.0 on Node 22 and 24. Both Homebridge versions also load and
 register the packaged platform in an isolated startup check. These are software
 checks. The separate hardware report records live EC-i and HOOBS monitoring
-results; Apple Home pairing and plugin-issued controls are separate acceptance
-steps.
+results, including Apple Home pairing. Plugin-issued controls still require a
+separate supervised acceptance test.
 
 ## Before connecting
 
@@ -83,6 +84,11 @@ HOOBS-managed bridge. The pilot used a dedicated bridge, installed the tarball
 in that bridge's `node_modules`, and saved the platform through HOOBS's configuration
 manager. There is no automated HOOBS installer or catalog entry yet. Do not edit
 an existing bridge containing unrelated accessories for an initial trial.
+
+**HOOBS 5.1.8 configuration-page limitation:** its client waits for catalogue
+metadata before loading an installed plugin's form. A manually installed,
+unlisted plugin can therefore show a blank configuration page even while the
+bridge works. See [HOOBS configuration notes](docs/hoobs-configuration.md).
 
 ## Configuration
 

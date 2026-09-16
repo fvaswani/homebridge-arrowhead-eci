@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Mask the PIN field in the HOOBS 5 visual editor using its explicit password widget.
+- Document the HOOBS 5.1.8 blank configuration page for plugins missing from its catalogue.
+- Confirm owner-completed Apple Home pairing; plugin-issued controls remain untested.
+
 ## 0.1.0-alpha.2
 
 - Add opt-in `sparseStatus` startup inference after an acknowledged five-second,
