@@ -4,7 +4,8 @@
 
 - Mask the PIN field in the HOOBS 5 visual editor using its explicit password widget.
 - Document the HOOBS 5.1.8 blank configuration page for plugins missing from its catalogue.
-- Confirm owner-completed Apple Home pairing; plugin-issued controls remain untested.
+- Confirm owner-completed Apple Home pairing and one supervised Away/Off
+  control cycle plus Home/Stay arming on firmware 10.3.61.
 
 ## 0.1.0-alpha.2
 

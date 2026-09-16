@@ -37,6 +37,30 @@ Test date: 2026-09-16. EC-i firmware 10.3.61 with an EC-IoT module.
   catalogue fallback. Its PIN field requires the explicit password widget
   included in the current source; the alpha.2 tarball predates this schema fix.
 
+## Supervised Apple Home controls
+
+After the owner privately configured the PIN and confirmed the alarm user
+number, controls were enabled on the dedicated bridge. The owner confirmed the
+alarm was disarmed, everyone was clear of the sensors, and the keypad/app was
+available for fallback.
+
+- The owner selected Away in Apple Home. The plugin logged command acceptance
+  at 22:43:52 NZST. HomeKit retained current Off while target became Away during
+  the exit countdown, then current and target both became Away at 22:44:22.
+- The owner confirmed Apple Home and the keypad/Elite app both showed armed.
+- The owner selected Off in Apple Home. The plugin logged command acceptance
+  at 22:44:46; current and target both became Off at 22:44:48.
+- The owner confirmed both interfaces showed disarmed. Communication fault
+  remained clear throughout. Controls were left enabled after the test.
+- In a further Home/Stay arm, target became Home at 22:45:30, followed by
+  confirmed current Home at 22:45:58 after the exit countdown. The owner
+  confirmed Stay mode in the keypad/app, then disarmed there. Current and
+  target both returned Off at 22:46:44.
+
+The observer read the running bridge's HomeKit status and filtered command logs.
+It did not send arm/disarm commands itself. These results validate one supervised
+Away/Off cycle and a Home/Stay arm on this panel, not other panels or firmware.
+
 ## Interpretation and limits
 
 AR1 is area alarm restored, not disarmed. RO1 is ready, not disarmed. An opt-in
@@ -49,8 +73,7 @@ missing polls invalidate the connection even when unrelated events arrive.
 
 There is no documented MODE 4 end-of-dump marker, so a truncated but partly valid
 reply remains a limitation. This is not manufacturer-certified synchronization.
-Stay mode, real alarm/siren events, tamper and battery states, plugin-issued
-controls remain unvalidated.
+Real alarm/siren events, tamper and battery states remain unvalidated.
 
 ## References
 

@@ -8,8 +8,9 @@ runtime is required.
 **Experimental. Firmware 10.3.61 sends sparse startup status replies.**
 Version 0.1.0-alpha.2 includes connection timing and opt-in sparse status fixes.
 Monitoring is running on one HOOBS 5.1.8 / Homebridge 1.8.4 installation with
-Node 20.19.1. Apple Home pairing is confirmed; plugin-issued controls remain
-unvalidated. It is not listed in the npm registry or claimed to be available
+Node 20.19.1. Apple Home pairing and owner-operated Away/Off controls through
+Apple Home are confirmed on this installation. A Home/Stay arm followed by
+manual disarm is also confirmed. It is not listed in the npm registry or claimed to be available
 in the HOOBS plugin catalog.
 
 ## Supported scope
@@ -28,7 +29,7 @@ The upstream integration describes firmware 10.3.50 and later. That is an
 upstream compatibility statement, not hardware validation for this plugin.
 Monitoring tests on firmware 10.3.61 confirmed MODE 4, live zone events,
 manual away-arm/disarm transitions and reconnects in both states with the
-opt-in sparse status setting. See [hardware validation](docs/hardware-validation.md).
+opt-in sparse status setting, plus an owner-operated Apple Home Away/Off test. See [hardware validation](docs/hardware-validation.md).
 
 **Arm and disarm commands affect the whole panel and all its areas.** Setting
 `area` chooses the area whose status is observed; it does not restrict commands
@@ -41,8 +42,8 @@ and an end-to-end simulator connection. They pass with Homebridge 1.8.4 on Node
 20 and Homebridge 2.4.0 on Node 22 and 24. Both Homebridge versions also load and
 register the packaged platform in an isolated startup check. These are software
 checks. The separate hardware report records live EC-i and HOOBS monitoring
-results, including Apple Home pairing. Plugin-issued controls still require a
-separate supervised acceptance test.
+results, including Apple Home pairing and a supervised Apple Home Away/Off
+control test and Home/Stay arming. Alarm-trigger reporting remains unvalidated.
 
 ## Before connecting
 
