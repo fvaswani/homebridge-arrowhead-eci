@@ -5,10 +5,10 @@ Serial over IP networking, such as an EC-IoT network module. Configured zones
 appear as motion or contact sensors. No Home Assistant, cloud account, or Python
 runtime is required.
 
-**Experimental. The first hardware test found incomplete startup status reporting.**
-The published 0.1.0-alpha.1 package also needs a connection startup timing fix.
-HOOBS is an intended target, but this release has not been certified or verified
-on a live HOOBS installation. It is not listed in the npm registry or claimed to
+**Experimental. Firmware 10.3.61 sends sparse startup status replies.**
+Version 0.1.0-alpha.2 includes connection timing and opt-in sparse status fixes.
+Monitoring is running on one HOOBS 5.1.8 / Homebridge 1.8.4 installation with
+Node 20.19.1. Apple Home pairing and plugin-issued controls remain unvalidated. It is not listed in the npm registry or claimed to
 be available in the HOOBS plugin catalog.
 
 ## Supported scope
@@ -25,8 +25,9 @@ be available in the HOOBS plugin catalog.
 
 The upstream integration describes firmware 10.3.50 and later. That is an
 upstream compatibility statement, not hardware validation for this plugin.
-A partial monitoring test on firmware 10.3.61 confirmed MODE 4 and live zone
-events, but did not validate complete startup state. See [hardware validation](docs/hardware-validation.md).
+Monitoring tests on firmware 10.3.61 confirmed MODE 4, live zone events,
+manual away-arm/disarm transitions and reconnects in both states with the
+opt-in sparse status setting. See [hardware validation](docs/hardware-validation.md).
 
 **Arm and disarm commands affect the whole panel and all its areas.** Setting
 `area` chooses the area whose status is observed; it does not restrict commands
@@ -38,7 +39,9 @@ The automated tests cover the TCP protocol, actual Homebridge HAP services,
 and an end-to-end simulator connection. They pass with Homebridge 1.8.4 on Node
 20 and Homebridge 2.4.0 on Node 22 and 24. Both Homebridge versions also load and
 register the packaged platform in an isolated startup check. These are software
-checks, not real EC-i panel, Apple Home pairing, or live HOOBS acceptance tests.
+checks. The separate hardware report records live EC-i and HOOBS monitoring
+results; Apple Home pairing and plugin-issued controls are separate acceptance
+steps.
 
 ## Before connecting
 
@@ -61,13 +64,13 @@ This prerelease is distributed as a package tarball for manual installation.
 It has **not been published to npm**, so installing by package name from the npm
 registry will not work yet.
 
-1. Download `homebridge-arrowhead-eci-0.1.0-alpha.1.tgz` from the
+1. Download `homebridge-arrowhead-eci-0.1.0-alpha.2.tgz` from the
    [GitHub releases page](https://github.com/fvaswani/homebridge-arrowhead-eci/releases).
 2. Install the downloaded file into the environment running your Homebridge
    instance. For a standard global Homebridge installation, use:
 
    ```sh
-   npm install -g /absolute/path/to/homebridge-arrowhead-eci-0.1.0-alpha.1.tgz
+   npm install -g /absolute/path/to/homebridge-arrowhead-eci-0.1.0-alpha.2.tgz
    ```
 
 3. Add the platform configuration below, replace the example address, and restart
@@ -137,20 +140,45 @@ requests status.
 
 ## How state and controls behave
 
-The alarm accessory reports confirmed panel state. Away and home/stay targets
+The alarm accessory reports panel events, plus inferred startup readings when
+experimental sparse status support is enabled. Away and home/stay targets
 send the corresponding panel request when controls are enabled; disarm sends a
 disarm request. A command acknowledgement means the request was accepted, not
-that arming or disarming has completed. The current state changes only when the
-panel reports it. Night arming is not supported in this initial scope.
+that arming or disarming has completed. Control acknowledgements do not change the current state. Night arming is not supported in this initial scope.
 
-Unknown or stale state produces a HomeKit communication error. A disconnected
-panel is not assumed to be disarmed, and an unknown zone is not assumed to be
-clear. The plugin reconnects after network loss, clears stale state, and obtains
+Unknown or disconnected state produces a HomeKit communication error. Valid
+status replies keep unchanged event-driven readings available; loss of qualified
+status replies for 90 seconds invalidates the connection. A disconnected panel
+is not assumed to be disarmed. By default, unknown zones remain unknown.
+The plugin reconnects after network loss, clears stale state, and obtains
 fresh status. It never replays a previous arm or disarm command after reconnect.
 
 Motion zones map to HomeKit motion sensors; contact zones map to contact sensors.
 Use the correct type and verify the active/clear behavior against the physical
 zone during installation.
+
+## Experimental sparse status support
+
+Some EC-i MODE 4 firmware, including the tested 10.3.61 panel, omits disarmed
+and closed-zone events from a STATUS reply. Set `"sparseStatus": true` only after
+checking your virtual keypad's area assignment and validating reconnects while
+armed and disarmed. This option is off by default.
+
+With this option enabled, the client waits five seconds after `OK Status` and
+requires readiness (`RO`/`NR`) and alarm (`AA`/`AR`) messages for the configured
+area. It then initializes still-unknown configured zones as closed and, if there
+is no armed, alarm or exit-delay indication, initializes unknown mode as disarmed.
+It never clears an observed armed/open state merely because a later reply omits
+it. Fault fields remain unknown unless explicitly reported.
+
+This collection window is a community-derived heuristic, not a manufacturer
+completion marker. An acknowledged but truncated dump could still omit relevant
+events. Missing acknowledgement, missing area markers, partial lines and network
+loss do not establish a usable snapshot. Keep controls disabled until your own
+hardware acceptance checks pass. RO and AR alone never mean disarmed.
+
+The approach was informed by the [openHAB binding's protocol observations](https://github.com/glenm-nz/openhab-addons/blob/elitealarm/bundles/org.openhab.binding.elitealarm/SPECIFICATION.md#state-synchronization),
+with an independent implementation and stricter checks here.
 
 ## Installer acceptance checklist
 

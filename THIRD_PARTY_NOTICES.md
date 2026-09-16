@@ -33,3 +33,10 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Additional protocol research
+
+The sparse STATUS collection window was informed by public protocol observations
+in [glenm-nz's openHAB EliteAlarm specification](https://github.com/glenm-nz/openhab-addons/blob/elitealarm/bundles/org.openhab.binding.elitealarm/SPECIFICATION.md#state-synchronization).
+That project uses EPL-2.0. Its source implementation was not copied into this
+plugin. The JavaScript implementation and tests here were written independently.

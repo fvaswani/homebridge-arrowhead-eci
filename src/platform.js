@@ -14,7 +14,8 @@ class ArrowheadPlatform {
     // Do not interpolate raw config or validation input into logs.
     try {
       this.config = parseConfig(config);
-      this.client = new Client({ host: this.config.host, port: this.config.port, area: this.config.area });
+      this.client = new Client({ host: this.config.host, port: this.config.port, area: this.config.area,
+        sparseStatus: this.config.sparseStatus, zoneIds: this.config.zones.map(zone => zone.id) });
     } catch (error) {
       log.error(`Arrowhead configuration: ${error.message}`);
       return;

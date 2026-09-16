@@ -1,13 +1,23 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.2
+
+- Add opt-in `sparseStatus` startup inference after an acknowledged five-second,
+  area-qualified collection window. Default remains explicit-event monitoring.
+- Keep unchanged readings while qualified status replies continue; invalidate
+  the connection when replies stop even if unrelated sensor events continue.
+- Handle area alarm and restore events independently from armed state.
+- Validate owner-operated away arm/disarm transitions and reconnects in both
+  states on EC-i firmware 10.3.61. Plugin-issued controls remain untested.
+- Add regressions for incomplete dumps, wrong areas, armed reconnects, active
+  alarms, exit delays and idle monitoring.
 
 - Wait one second after a TCP connection before MODE 4 negotiation. A live EC-i
   module discarded commands sent immediately while its welcome phase completed.
 - Cancel the pending handshake when the client stops or disconnects.
 - Add regression tests for delayed module readiness and stopping during startup.
-- Document partial firmware 10.3.61 hardware results and the unresolved startup
-  state limitation. No live HOOBS deployment is validated yet.
+- Document partial firmware 10.3.61 hardware results and sparse status limitations. Monitoring is running on one HOOBS 5.1.8 installation; Apple Home pairing and
+  plugin-issued controls remain pending.
 
 ## 0.1.0-alpha.1
 

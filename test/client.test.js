@@ -36,7 +36,7 @@ async function simulator(t, handler, options = {}) {
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
   const client = new ArrowheadClient({ host: '127.0.0.1', port: server.address().port,
     commandTimeoutMs: 150, reconnectDelayMs: 30, heartbeatMs: 1000,
-    staleTimeoutMs: 3000, connectSettleMs: 10, ...options });
+    staleTimeoutMs: 3000, connectSettleMs: 10, snapshotWindowMs: 30, ...options });
   t.after(async () => {
     client.stop();
     for (const socket of sockets) socket.destroy();
@@ -48,7 +48,7 @@ async function simulator(t, handler, options = {}) {
 
 function normalHandshake(line, socket) {
   if (line === 'MODE 4') socket.write('OK MODE 4\r\n');
-  else if (line === 'STATUS') socket.write('D1\nZC001\nBR\nTR\nMR\n');
+  else if (line === 'STATUS') socket.write('OK Status\nRO1\nAR1\nD1\nZC001\nBR\nTR\nMR\n');
 }
 
 test('validates network and timing configuration without leaking values', () => {
@@ -231,7 +231,7 @@ test('disconnect invalidates confirmed fields and stop prevents further reconnec
 test('heartbeats send STATUS and stale traffic invalidates an otherwise open socket', async t => {
   const { client, sockets, lines } = await simulator(t, (line, socket) => {
     if (line === 'MODE 4') socket.write('OK\n');
-    if (line === 'STATUS' && !lines.filter(r => r.line === 'STATUS').slice(1).length) socket.write('D1\n');
+    if (line === 'STATUS' && !lines.filter(r => r.line === 'STATUS').slice(1).length) socket.write('OK Status\nRO1\nAR1\nD1\n');
   }, { heartbeatMs: 15, staleTimeoutMs: 80, reconnectDelayMs: 200 });
   await until(() => client.state.mode === 'disarmed');
   await until(() => !client.connected);
@@ -240,16 +240,15 @@ test('heartbeats send STATUS and stale traffic invalidates an otherwise open soc
   await until(() => sockets[0].destroyed);
 });
 
-test('other zone traffic cannot keep an old mode and zone value fresh', async t => {
+test('zone events cannot hide missing status replies', async t => {
   const { client, sockets } = await simulator(t, normalHandshake,
     { heartbeatMs: 1000, staleTimeoutMs: 80, reconnectDelayMs: 200 });
   await until(() => client.state.mode === 'disarmed');
   const interval = setInterval(() => sockets[0].write('ZO002\n'), 15);
   t.after(() => clearInterval(interval));
   await until(() => client.state.mode === 'unknown');
-  assert.equal(client.connected, true);
-  assert.equal(client.state.zones.has(1), false);
-  assert.equal(client.state.zones.get(2), true);
+  assert.equal(client.connected, false);
+  assert.equal(client.state.zones.size, 0);
   assert.equal(client.state.batteryLow, null);
 });
 
@@ -373,4 +372,112 @@ test('stopping during connection initialization cancels the pending handshake', 
   await sleep(150);
   assert.deepEqual(lines, []);
   assert.equal(client.connected, false);
+});
+
+test('opt-in sparse snapshot initializes only after ACK, area markers and collection window', async t => {
+  const { client, sockets } = await simulator(t, (line, socket) => {
+    if (line === 'MODE 4') socket.write('OK MODE 4\n');
+    if (line === 'STATUS') socket.write('OK Status\nRO1\nAR1\n');
+  }, { sparseStatus: true, zoneIds: [1, 2, 3], snapshotWindowMs: 100 });
+  await until(() => client.connected);
+  assert.equal(client.state.mode, 'unknown');
+  assert.equal(client.state.zones.size, 0);
+  sockets[0].write('ZO2\n');
+  await until(() => client.state.mode === 'disarmed');
+  assert.deepEqual([...client.state.zones].sort(), [[1, false], [2, true], [3, false]]);
+  assert.equal(client.state.tamper, null);
+});
+
+test('sparse inference is disabled by default', async t => {
+  const { client } = await simulator(t, (line, socket) => {
+    if (line === 'MODE 4') socket.write('OK MODE 4\n');
+    if (line === 'STATUS') socket.write('OK Status\nRO1\nAR1\n');
+  }, { zoneIds: [1], heartbeatMs: 60, staleTimeoutMs: 150 });
+  await until(() => client.connected);
+  await sleep(220);
+  assert.equal(client.connected, true);
+  assert.equal(client.state.mode, 'unknown');
+  assert.equal(client.state.zones.size, 0);
+});
+
+test('incomplete or wrong-area snapshots never infer safe state', async t => {
+  for (const response of ['RO1\nAR1\n', 'OK Status\n', 'OK Status\nRO2\nAR2\n',
+    'OK Status\nRO1\n', 'OK Status\nAR1\n', 'OK Status\nRO1\nAR1\nA']) {
+    await t.test(JSON.stringify(response), async sub => {
+      const { client } = await simulator(sub, (line, socket) => {
+        if (line === 'MODE 4') socket.write('OK MODE 4\n');
+        if (line === 'STATUS') socket.write(response);
+      }, { sparseStatus: true, zoneIds: [1] });
+      await until(() => client.connected);
+      await sleep(70);
+      assert.equal(client.state.mode, 'unknown');
+      assert.equal(client.state.zones.size, 0);
+    });
+  }
+});
+
+test('snapshot completion preserves armed, alarm and exit-delay events', async t => {
+  for (const [events, mode, alarm, pending] of [
+    ['A1\n', 'away', false, null], ['S1\n', 'home', false, null],
+    ['AA1\n', 'unknown', true, null], ['ZA1\n', 'unknown', true, null],
+    ['EDA1-30\n', 'unknown', false, 'away'], ['EDS1-30\n', 'unknown', false, 'home'],
+  ]) {
+    await t.test(events.trim(), async sub => {
+      const { client } = await simulator(sub, (line, socket) => {
+        if (line === 'MODE 4') socket.write('OK MODE 4\n');
+        if (line === 'STATUS') socket.write('OK Status\nRO1\nAR1\n' + events);
+      }, { sparseStatus: true, zoneIds: [1] });
+      await until(() => client.connected);
+      await sleep(60);
+      assert.equal(client.state.mode, mode);
+      assert.equal(client.state.alarm, alarm);
+      assert.equal(client.state.pending, pending);
+    });
+  }
+});
+
+test('idle state survives repeated valid sparse replies beyond the stale timeout', async t => {
+  let snapshots = 0;
+  const { client } = await simulator(t, (line, socket) => {
+    if (line === 'MODE 4') socket.write('OK MODE 4\n');
+    if (line === 'STATUS') {
+      socket.write('OK Status\nRO1\nAR1\n' + (++snapshots === 1 ? 'A1\nZC1\n' : ''));
+    }
+  }, { heartbeatMs: 60, staleTimeoutMs: 150, sparseStatus: true, zoneIds: [1] });
+  await until(() => client.state.mode === 'away');
+  await sleep(350);
+  assert.ok(snapshots >= 4);
+  assert.equal(client.connected, true);
+  assert.equal(client.state.mode, 'away');
+  assert.equal(client.state.zones.get(1), false);
+});
+
+test('disconnect during snapshot cancels inference and armed reconnect restores from new data', async t => {
+  const { client, sockets } = await simulator(t, (line, socket, connection) => {
+    if (line === 'MODE 4') socket.write('OK MODE 4\n');
+    if (line === 'STATUS') {
+      socket.write('OK Status\nRO1\nAR1\n' + (connection > 1 ? 'A1\nZO1\n' : ''));
+    }
+  }, { sparseStatus: true, zoneIds: [1], snapshotWindowMs: 80, reconnectDelayMs: 150 });
+  await until(() => client.connected);
+  sockets[0].destroy();
+  await until(() => !client.connected);
+  await sleep(100);
+  assert.equal(client.state.mode, 'unknown');
+  assert.equal(client.state.zones.size, 0);
+  await until(() => sockets.length === 2 && client.state.mode === 'away');
+  await sleep(120);
+  assert.equal(client.state.mode, 'away');
+  assert.equal(client.state.zones.get(1), true);
+});
+
+test('area alarm restore never means disarmed and does not clear a zone alarm', async t => {
+  const { client, sockets } = await simulator(t, normalHandshake);
+  await until(() => client.state.mode === 'disarmed');
+  sockets[0].write('A1\nAA1\nZA1\nAR1\n');
+  await until(() => client.state.mode === 'away');
+  assert.equal(client.state.alarm, true);
+  sockets[0].write('ZR1\n');
+  await until(() => !client.state.alarm);
+  assert.equal(client.state.mode, 'away');
 });

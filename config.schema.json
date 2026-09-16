@@ -2,7 +2,7 @@
   "pluginAlias": "ArrowheadECi",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Experimental EC-i integration for single-area installations. Controls affect the entire panel. Start with controls disabled. Requires local Serial over IP with MODE 4; communication is unencrypted. No real-panel validation yet.",
+  "headerDisplay": "Experimental EC-i integration for single-area installations. Controls affect the entire panel. Start with controls disabled. Requires local Serial over IP with MODE 4; communication is unencrypted. Partial monitoring validation on firmware 10.3.61; arm/disarm testing pending.",
   "schema": {
     "type": "object",
     "required": ["host"],
@@ -11,6 +11,7 @@
       "host": {"title":"Alarm IP address or hostname", "type":"string", "minLength":1, "maxLength":253, "pattern":"^[a-zA-Z0-9.:_-]+$"},
       "port": {"title":"Serial over IP port", "type":"integer", "default":9000, "minimum":1, "maximum":65535},
       "area": {"title":"Single alarm area to monitor", "type":"integer", "default":1, "minimum":1, "maximum":32},
+      "sparseStatus": {"title":"Experimental: infer inactive startup states from sparse STATUS replies", "description":"Enable only after checking armed reconnects and configured zones on your panel. Waits five seconds after a status acknowledgement and requires matching area readiness and alarm reports.", "type":"boolean", "default":false},
       "enableControl": {"title":"Enable whole-panel arm/disarm controls", "type":"boolean", "default":false},
       "userNumber": {"title":"Alarm user number", "type":"integer", "default":1, "minimum":1, "maximum":2000},
       "pin": {"title":"Alarm PIN (stored in bridge configuration)", "type":"string", "format":"password", "pattern":"^([0-9]{3,12})?$"},

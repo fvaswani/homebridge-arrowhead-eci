@@ -15,6 +15,7 @@ function parseConfig(input, env = process.env) {
   }
   if (input.enableControl !== undefined && typeof input.enableControl !== 'boolean') throw new Error('enableControl must be a boolean');
   const enableControl = input.enableControl === true;
+  if (input.sparseStatus !== undefined && typeof input.sparseStatus !== 'boolean') throw new Error('sparseStatus must be a boolean');
   if (input.pin !== undefined && typeof input.pin !== 'string') throw new Error('pin must be a string');
   if (input.pinEnvironment !== undefined && (typeof input.pinEnvironment !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(input.pinEnvironment))) {
     throw new Error('pinEnvironment must be a valid environment variable name');
@@ -42,7 +43,7 @@ function parseConfig(input, env = process.env) {
     area: integer(input.area === undefined ? 1 : input.area, 'area', 1, 32),
     name: input.name === undefined ? 'Arrowhead Alarm' : input.name.trim(), enableControl,
     userNumber: integer(input.userNumber === undefined ? 1 : input.userNumber, 'userNumber', 1, 2000),
-    pin: pin || '', zones: parsedZones,
+    pin: pin || '', zones: parsedZones, sparseStatus: input.sparseStatus === true,
   };
 }
 module.exports = { parseConfig };

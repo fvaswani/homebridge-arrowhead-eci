@@ -20,7 +20,7 @@ function positiveInteger(value, name, max = 2147483647) {
 class ArrowheadClient extends EventEmitter {
   constructor({ host, port = 9000, area = 1, commandTimeoutMs = 5000,
     reconnectDelayMs = 1000, heartbeatMs = 30000, staleTimeoutMs = 90000,
-    connectSettleMs = 1000 } = {}) {
+    connectSettleMs = 1000, snapshotWindowMs = 5000, sparseStatus = false, zoneIds = [] } = {}) {
     super();
     if (typeof host !== 'string' || host.length > 253 ||
         (!net.isIP(host) && !host.split('.').every(label =>
@@ -29,8 +29,12 @@ class ArrowheadClient extends EventEmitter {
     positiveInteger(port, 'port', 65535);
     positiveInteger(area, 'area', 32);
     for (const [name, value] of Object.entries({ commandTimeoutMs, reconnectDelayMs,
-      heartbeatMs, staleTimeoutMs, connectSettleMs })) positiveInteger(value, name);
-    this.options = { host, port, area, commandTimeoutMs, reconnectDelayMs, heartbeatMs, staleTimeoutMs, connectSettleMs };
+      heartbeatMs, staleTimeoutMs, connectSettleMs, snapshotWindowMs })) positiveInteger(value, name);
+    if (typeof sparseStatus !== 'boolean') throw new TypeError('Invalid sparse status option');
+    if (!Array.isArray(zoneIds) || zoneIds.length > 148) throw new TypeError('Invalid zone ids');
+    zoneIds.forEach(id => positiveInteger(id, 'zone id', 248));
+    this.options = { host, port, area, commandTimeoutMs, reconnectDelayMs, heartbeatMs,
+      staleTimeoutMs, connectSettleMs, snapshotWindowMs, sparseStatus, zoneIds: [...new Set(zoneIds)] };
     this.connected = false;
     this.state = emptyState();
     this._running = false;
@@ -43,7 +47,9 @@ class ArrowheadClient extends EventEmitter {
     this._settleTimer = null;
     this._buffer = '';
     this._attempt = 0;
-    this._freshness = new Map();
+    this._snapshot = null;
+    this._snapshotTimer = null;
+    this._areaAlarm = false;
     this._alarms = new Set();
   }
 
@@ -103,11 +109,10 @@ class ArrowheadClient extends EventEmitter {
         // only in this transaction; generic OK never acknowledges a control.
         this._request('MODE 4', /^(?:MODE 4|OK(?: MODE(?: 4)?)?)$/i).then(() => {
           if (this._socket !== socket || !this._running) return;
-          this._lastMessage = Date.now();
-          this._lastHeartbeat = Date.now();
+          this._lastStatus = Date.now();
           this._attempt = 0;
-          socket.write('STATUS\n');
           this.connected = true;
+          this._pollStatus();
           this.emit('availability', true);
           this._health = setInterval(() => this._tick(), Math.max(5,
             Math.min(1000, this.options.heartbeatMs, this.options.staleTimeoutMs / 4)));
@@ -153,8 +158,17 @@ class ArrowheadClient extends EventEmitter {
   }
 
   _line(line) {
+    // This ACK starts, rather than ends, the panel's sparse status dump.
+    // Only accept it while our own STATUS request is pending.
+    if (/^OK Status$/i.test(line)) {
+      if (this._snapshot && !this._snapshot.ack) {
+        this._snapshot.ack = true;
+        clearTimeout(this._snapshotTimer);
+        this._snapshotTimer = setTimeout(() => this._finishSnapshot(), this.options.snapshotWindowMs);
+      }
+      return;
+    }
     if (this._event(line)) {
-      this._lastMessage = Date.now();
       this.emit('state', this.state);
       return;
     }
@@ -166,7 +180,6 @@ class ArrowheadClient extends EventEmitter {
     }
     const request = this._active;
     if (request && request.acknowledgement.test(line)) {
-      this._lastMessage = Date.now();
       clearTimeout(request.timer);
       this._active = null;
       request.resolve();
@@ -177,23 +190,32 @@ class ArrowheadClient extends EventEmitter {
   }
 
   _event(line) {
-    let match = /^([ADS])(\d{1,2})(?:-U\d{1,4})?$/.exec(line);
+    let match = /^(RO|NR|AA|AR)(\d{1,2})$/.exec(line);
+    if (match && Number(match[2]) === this.options.area) {
+      if (this._snapshot?.ack) {
+        if (match[1] === 'RO' || match[1] === 'NR') this._snapshot.readySeen = true;
+        else this._snapshot.alarmSeen = true;
+      }
+      if (match[1] === 'AA' || match[1] === 'AR') {
+        this._areaAlarm = match[1] === 'AA';
+        this.state.alarm = this._areaAlarm || this._alarms.size > 0;
+      }
+      return true;
+    }
+    match = /^([ADS])(\d{1,2})(?:-U\d{1,4})?$/.exec(line);
     if (match && Number(match[2]) === this.options.area) {
       this.state.mode = { A: 'away', D: 'disarmed', S: 'home' }[match[1]];
       this.state.pending = null;
-      this._freshness.set('mode', Date.now());
-      this._freshness.delete('pending');
       if (match[1] === 'D') {
+        this._areaAlarm = false;
         this._alarms.clear();
         this.state.alarm = false;
-        this._freshness.delete('alarm');
       }
       return true;
     }
     match = /^(EDA|EDS)(\d{1,2})(?:-\d{1,5})?$/.exec(line);
     if (match && Number(match[2]) === this.options.area) {
       this.state.pending = match[1] === 'EDA' ? 'away' : 'home';
-      this._freshness.set('pending', Date.now());
       return true;
     }
     match = /^(ZO|ZC|ZA|ZR)(\d{1,3})$/.exec(line);
@@ -201,13 +223,10 @@ class ArrowheadClient extends EventEmitter {
       const zone = Number(match[2]);
       if (match[1] === 'ZO' || match[1] === 'ZC') {
         this.state.zones.set(zone, match[1] === 'ZO');
-        this._freshness.set(`zone:${zone}`, Date.now());
       } else {
         if (match[1] === 'ZA') this._alarms.add(zone);
         else this._alarms.delete(zone);
-        this.state.alarm = this._alarms.size > 0;
-        if (this.state.alarm) this._freshness.set('alarm', Date.now());
-        else this._freshness.delete('alarm');
+        this.state.alarm = this._areaAlarm || this._alarms.size > 0;
       }
       return true;
     }
@@ -215,36 +234,50 @@ class ArrowheadClient extends EventEmitter {
       TA: ['tamper', true], TR: ['tamper', false], MF: ['mainsFault', true], MR: ['mainsFault', false] }[line];
     if (Array.isArray(system)) {
       this.state[system[0]] = system[1];
-      this._freshness.set(system[0], Date.now());
       return true;
     }
     return false;
   }
 
+  _pollStatus() {
+    if (this._snapshot) return;
+    this._lastHeartbeat = Date.now();
+    this._snapshot = { ack: false, readySeen: false, alarmSeen: false };
+    // Missing ACKs must not leave a pending poll alive indefinitely.
+    this._snapshotTimer = setTimeout(() => this._finishSnapshot(), this.options.commandTimeoutMs);
+    this._socket.write('STATUS\n');
+  }
+
+  _finishSnapshot() {
+    const snapshot = this._snapshot;
+    this._snapshot = null;
+    this._snapshotTimer = null;
+    if (!this.connected || !snapshot?.ack || !snapshot.readySeen || !snapshot.alarmSeen || this._buffer) return;
+    this._lastStatus = Date.now();
+    if (!this.options.sparseStatus) return;
+    // Experimental startup inference: firmware omits inactive states. Only fill
+    // unknown fields after an acknowledged, area-qualified collection window.
+    // Never erase an observed armed/open/alarm/exit-delay event by its absence.
+    if (this.state.mode === 'unknown' && !this.state.pending && !this.state.alarm) {
+      this.state.mode = 'disarmed';
+    }
+    for (const zone of this.options.zoneIds) {
+      if (!this.state.zones.has(zone)) this.state.zones.set(zone, false);
+    }
+    this.emit('state', this.state);
+  }
+
   _tick() {
     if (!this.connected) return;
     const now = Date.now();
-    if (now - this._lastMessage >= this.options.staleTimeoutMs) {
-      this._disconnect(new Error('Panel state stale'));
+    // Event-driven fields do not expire individually. Poll responses establish
+    // connection health; unrelated zone traffic cannot conceal failed polls.
+    if (now - this._lastStatus >= this.options.staleTimeoutMs) {
+      this._disconnect(new Error('Panel status replies stale'));
       return;
     }
-    let changed = false;
-    for (const [key, time] of this._freshness) {
-      if (now - time < this.options.staleTimeoutMs) continue;
-      if (key === 'alarm') {
-        this._disconnect(new Error('Alarm state stale'));
-        return;
-      }
-      if (key.startsWith('zone:')) this.state.zones.delete(Number(key.slice(5)));
-      else this.state[key] = key === 'mode' ? 'unknown' : null;
-      this._freshness.delete(key);
-      changed = true;
-    }
-    if (changed) this.emit('state', this.state);
-    if (now - this._lastHeartbeat >= this.options.heartbeatMs && !this._active && !this._queue.length) {
-      this._lastHeartbeat = now;
-      // STATUS emits independent events, without a guaranteed terminal ACK.
-      this._socket.write('STATUS\n');
+    if (now - this._lastHeartbeat >= this.options.heartbeatMs && !this._snapshot && !this._active && !this._queue.length) {
+      this._pollStatus();
     }
   }
 
@@ -253,6 +286,9 @@ class ArrowheadClient extends EventEmitter {
     this._socket = null;
     clearTimeout(this._connectTimer);
     clearTimeout(this._settleTimer);
+    clearTimeout(this._snapshotTimer);
+    this._snapshotTimer = null;
+    this._snapshot = null;
     this._settleTimer = null;
     clearInterval(this._health);
     this._health = null;
@@ -268,8 +304,8 @@ class ArrowheadClient extends EventEmitter {
     if (socket) socket.destroy();
     this.connected = false;
     this.state = emptyState();
-    this._freshness.clear();
     this._alarms.clear();
+    this._areaAlarm = false;
     this._buffer = '';
     this.emit('availability', false);
     this.emit('state', this.state);

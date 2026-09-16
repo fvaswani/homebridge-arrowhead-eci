@@ -7,8 +7,8 @@ const { ArrowheadPlatform } = require('../src/platform');
 const { parseConfig } = require('../src/config');
 
 class FakeClient extends EventEmitter {
-  constructor() {
-    super(); this.connected = false; this.commands = [];
+  constructor(options) {
+    super(); this.options = options; this.connected = false; this.commands = [];
     this.state = { mode: 'unknown', alarm: false, pending: null, zones: new Map(), tamper: null };
   }
   start() { this.started = true; }
@@ -147,4 +147,13 @@ test('client construction errors fail closed rather than crashing Homebridge', (
   const platform=new ArrowheadPlatform({error:x=>errors.push(x)}, {host:'alarm.-local'},api);
   assert.equal(platform.client,undefined);
   assert.ok(errors[0].includes('configuration'));
+});
+
+
+test('sparse status is opt-in and configured zones reach the client', () => {
+  assert.equal(parseConfig({host:'localhost'}).sparseStatus, false);
+  assert.throws(() => parseConfig({host:'localhost', sparseStatus:'true'}));
+  const x = setup({sparseStatus:true, zones:[{id:1,name:'Hall'},{id:3,name:'Lounge'}]});
+  assert.equal(x.client.options.sparseStatus, true);
+  assert.deepEqual(x.client.options.zoneIds,[1,3]);
 });
