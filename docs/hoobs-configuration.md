@@ -16,6 +16,25 @@ were changed. This is a local workaround, not a fix delivered by the plugin
 package, and a HOOBS update can overwrite it. There is no general-purpose HOOBS
 installer or supported automatic client patch in this project.
 
+## Local plug-in icon
+
+On 18 September 2026, the pilot's HOOBS 5.1.8 web client received the project's
+shield-and-arrowhead artwork. The image is served locally as
+`/arrowhead-eci-icon.png` from `/usr/lib/hoobsd/static/`. The existing
+Arrowhead-only metadata fallback was preserved and extended with the icon.
+Scoped changes in `/usr/lib/hoobsd/static/main.js` display it on the plug-in
+card, the bridge's installed-plugin list, the configuration header, and the
+fallback details content. Other plugins retain their existing icons.
+
+This is a local presentation workaround, not a HOOBS catalogue registration.
+A HOOBS update can replace it. No bridge restart is required. The SVG source
+and PNG are retained under `assets/` in this repository and in future packages.
+
+The pre-icon client bundle is backed up under the pilot's
+`/var/lib/hoobs/backups/arrowhead-icon-20260918-234031/` directory.
+To roll back, restore its `main.js` to `/usr/lib/hoobsd/static/main.js`, remove
+`/usr/lib/hoobsd/static/arrowhead-eci-icon.png`, and refresh the browser.
+
 ## PIN field
 
 HOOBS 5.1.8 ignores the schema's `format: password` when choosing its input

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Arrowhead EC-i community plug-in</title>
+  <desc id="description">A mint arrowhead inside a white security shield on a dark blue rounded square.</desc>
+  <rect width="512" height="512" rx="112" fill="#102A43"/>
+  <path d="M256 64 L400 121 V245 C400 339 343 408 256 447 C169 408 112 339 112 245 V121 Z" fill="#F5F9FC"/>
+  <path d="M256 91 L376 138 V245 C376 323 330 383 256 420 C182 383 136 323 136 245 V138 Z" fill="#102A43"/>
+  <path d="M256 151 L347 315 L256 273 L165 315 Z" fill="#5EEAD4"/>
+  <rect x="245" y="297" width="22" height="65" rx="11" fill="#5EEAD4"/>
+</svg>

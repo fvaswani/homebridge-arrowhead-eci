@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an original shield-and-arrowhead icon to the README, Homebridge settings
+  header, and packaged assets; document the pilot's local HOOBS icon workaround.
 - Include queue wait in the five-second control deadline so expired arm/disarm
   commands are discarded before HomeKit times out and are never replayed.
 - Mask the PIN field in the HOOBS 5 visual editor using its explicit password widget.

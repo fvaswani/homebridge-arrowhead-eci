@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/fvaswani/homebridge-arrowhead-eci/main/assets/icon.png" width="128" height="128" alt="Arrowhead EC-i community plug-in icon">
+</p>
+
 # homebridge-arrowhead-eci
 
 Expose an Arrowhead EC-i alarm panel to Apple Home using Homebridge and local
