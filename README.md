@@ -10,12 +10,14 @@ appear as motion or contact sensors. No Home Assistant, cloud account, or Python
 runtime is required.
 
 **Experimental. Firmware 10.3.61 sends sparse startup status replies.**
-Version 0.1.0-alpha.2 includes connection timing and opt-in sparse status fixes.
+Version 0.1.0-alpha.3 includes the queued-command deadline fix, HOOBS PIN-field
+masking, and plug-in artwork, alongside the existing connection timing and
+opt-in sparse status support.
 Monitoring is running on one HOOBS 5.1.8 / Homebridge 1.8.4 installation with
 Node 20.19.1. Apple Home pairing and owner-operated Away/Off controls through
 Apple Home are confirmed on this installation. A Home/Stay arm followed by
-manual disarm is also confirmed. It is not listed in the npm registry or claimed to be available
-in the HOOBS plugin catalog.
+manual disarm is also confirmed. HOOBS catalogue availability and certification
+are not claimed.
 
 ## Supported scope
 
@@ -33,7 +35,7 @@ The upstream integration describes firmware 10.3.50 and later. That is an
 upstream compatibility statement, not hardware validation for this plugin.
 Monitoring tests on firmware 10.3.61 confirmed MODE 4, live zone events,
 manual away-arm/disarm transitions and reconnects in both states with the
-opt-in sparse status setting, plus an owner-operated Apple Home Away/Off test. See [hardware validation](docs/hardware-validation.md).
+opt-in sparse status setting, plus an owner-operated Apple Home Away/Off test. See [hardware validation](https://github.com/fvaswani/homebridge-arrowhead-eci/blob/main/docs/hardware-validation.md).
 
 **Arm and disarm commands affect the whole panel and all its areas.** Setting
 `area` chooses the area whose status is observed; it does not restrict commands
@@ -66,17 +68,26 @@ and never forward TCP port 9000, or a replacement serial port, to the internet.
 
 ## Installation
 
-This prerelease is distributed as a package tarball for manual installation.
-It has **not been published to npm**, so installing by package name from the npm
-registry will not work yet.
+This is an experimental prerelease. For a standard global Homebridge
+installation, use this version-pinned command once alpha.3 is available on npm:
 
-1. Download `homebridge-arrowhead-eci-0.1.0-alpha.2.tgz` from the
-   [GitHub releases page](https://github.com/fvaswani/homebridge-arrowhead-eci/releases).
-2. Install the downloaded file into the environment running your Homebridge
+```sh
+npm install -g homebridge-arrowhead-eci@0.1.0-alpha.3
+```
+
+Prereleases use the `alpha` distribution tag; do not assume `latest` points to
+this version. If alpha.3 is not yet available in the registry, use the prepared
+tarball or build it from source as described below.
+
+1. Obtain `homebridge-arrowhead-eci-0.1.0-alpha.3.tgz` from the maintainer or its
+   [GitHub release](https://github.com/fvaswani/homebridge-arrowhead-eci/releases)
+   when available. Alternatively, build it from the alpha.3 source with `npm ci`
+   followed by `npm pack`. Older alpha.2 tarballs do not include all alpha.3 fixes.
+2. Install the package file into the environment running your Homebridge
    instance. For a standard global Homebridge installation, use:
 
    ```sh
-   npm install -g /absolute/path/to/homebridge-arrowhead-eci-0.1.0-alpha.2.tgz
+   npm install -g /absolute/path/to/homebridge-arrowhead-eci-0.1.0-alpha.3.tgz
    ```
 
 3. Add the platform configuration below, replace the example address, and restart
@@ -93,7 +104,7 @@ an existing bridge containing unrelated accessories for an initial trial.
 **HOOBS 5.1.8 configuration-page limitation:** its client waits for catalogue
 metadata before loading an installed plugin's form. A manually installed,
 unlisted plugin can therefore show a blank configuration page even while the
-bridge works. See [HOOBS configuration notes](docs/hoobs-configuration.md).
+bridge works. See [HOOBS configuration notes](https://github.com/fvaswani/homebridge-arrowhead-eci/blob/main/docs/hoobs-configuration.md).
 
 ## Configuration
 
@@ -237,14 +248,14 @@ Report reproducible issues at
 [GitHub Issues](https://github.com/fvaswani/homebridge-arrowhead-eci/issues).
 Include plugin, Node.js, Homebridge or HOOBS, EC-i panel, and network-module
 (such as EC-IoT) firmware versions, plus a redacted configuration and the
-observed sequence. Omit PINs, raw serial commands, and unredacted packet captures. See [SECURITY.md](SECURITY.md) for
-private security reporting and [CONTRIBUTING.md](CONTRIBUTING.md) for development.
+observed sequence. Omit PINs, raw serial commands, and unredacted packet captures. See [SECURITY.md](https://github.com/fvaswani/homebridge-arrowhead-eci/blob/main/SECURITY.md) for
+private security reporting and [CONTRIBUTING.md](https://github.com/fvaswani/homebridge-arrowhead-eci/blob/main/CONTRIBUTING.md) for development.
 
 ## Credits and license
 
 MIT licensed. Protocol behavior was informed by
 [Thanos Kasolas's Arrowhead Home Assistant integration](https://github.com/thanoskas/arrowhead_alarm)
 at commit `0dd21b597ed557b7aca8b94afd7bb05d70469b87`.
-See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the
+See [LICENSE](https://github.com/fvaswani/homebridge-arrowhead-eci/blob/main/LICENSE) and [THIRD_PARTY_NOTICES.md](https://github.com/fvaswani/homebridge-arrowhead-eci/blob/main/THIRD_PARTY_NOTICES.md) for the
 preserved upstream copyright and license. This is an independent community
 project with no claimed endorsement by Arrowhead, HOOBS, or the upstream author.

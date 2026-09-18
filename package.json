@@ -1,6 +1,6 @@
 {
   "name": "homebridge-arrowhead-eci",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "description": "Experimental local Arrowhead EC-i alarm integration for Homebridge and HOOBS",
   "main": "index.js",
   "license": "MIT",
@@ -38,6 +38,9 @@
     "THIRD_PARTY_NOTICES.md",
     "SECURITY.md",
     "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "docs/hardware-validation.md",
+    "docs/hoobs-configuration.md",
     "examples/"
   ],
   "scripts": {

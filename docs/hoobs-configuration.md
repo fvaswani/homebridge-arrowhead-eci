@@ -28,7 +28,7 @@ fallback details content. Other plugins retain their existing icons.
 
 This is a local presentation workaround, not a HOOBS catalogue registration.
 A HOOBS update can replace it. No bridge restart is required. The SVG source
-and PNG are retained under `assets/` in this repository and in future packages.
+and PNG are retained under `assets/` in this repository and in the alpha.3 package.
 
 The pre-icon client bundle is backed up under the pilot's
 `/var/lib/hoobs/backups/arrowhead-icon-20260918-234031/` directory.
@@ -46,9 +46,9 @@ new assets. Alarm configuration and runtime JavaScript were not changed.
 ## PIN field
 
 HOOBS 5.1.8 ignores the schema's `format: password` when choosing its input
-widget. The current source also sets `x-schema-form.type: password`, verified
-as an HTML password input in the running form. This fix is not in the existing
-alpha.2 release tarball. Masking protects the displayed field; it does not
+widget. Alpha.3 also sets `x-schema-form.type: password`, verified
+as an HTML password input in the running pilot's form. This fix is absent from
+the older alpha.2 release tarball. Masking protects the displayed field; it does not
 change how the PIN is stored or transmitted.
 
 Enter the PIN privately in the visual editor, keep controls disabled, and save

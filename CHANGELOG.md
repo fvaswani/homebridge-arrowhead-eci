@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.3
 
 - Add an original shield-and-arrowhead icon to the README, Homebridge settings
   header, and packaged assets; document the pilot's local HOOBS icon workaround.
@@ -10,6 +10,10 @@
 - Document the HOOBS 5.1.8 blank configuration page for plugins missing from its catalogue.
 - Confirm owner-completed Apple Home pairing and one supervised Away/Off
   control cycle plus Home/Stay arming on firmware 10.3.61.
+- Include hardware-validation, HOOBS configuration, and contribution documents
+  in the package, and use repository URLs for README links on npm.
+- Update the settings notice to distinguish confirmed controls from unvalidated
+  alarm-trigger reporting. No new hardware validation is claimed for alpha.3.
 
 ## 0.1.0-alpha.2
 

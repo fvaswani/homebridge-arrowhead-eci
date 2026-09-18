@@ -2,6 +2,10 @@
 
 Test date: 2026-09-16. EC-i firmware 10.3.61 with an EC-IoT module.
 
+These observations describe the alpha.2-based pilot and its documented local
+changes. Alpha.3 packages subsequent fixes and artwork; preparing that release
+does not constitute a new hardware acceptance test.
+
 ## Confirmed on hardware
 
 - TCP port 9000 became reachable after the owner restarted the alarm following
@@ -35,7 +39,7 @@ Test date: 2026-09-16. EC-i firmware 10.3.61 with an EC-IoT module.
   need user verification.
 - The HOOBS visual configuration form was verified after a local client-only
   catalogue fallback. Its PIN field requires the explicit password widget
-  included in the current source; the alpha.2 tarball predates this schema fix.
+  included in alpha.3; the alpha.2 tarball predates this schema fix.
 
 ## Supervised Apple Home controls
 

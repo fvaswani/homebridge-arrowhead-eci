@@ -2,7 +2,7 @@
   "pluginAlias": "ArrowheadECi",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "<img src=\"https://raw.githubusercontent.com/fvaswani/homebridge-arrowhead-eci/main/assets/icon.png\" alt=\"Arrowhead EC-i community plug-in\" width=\"80\" height=\"80\">\n\nExperimental EC-i integration for single-area installations. Controls affect the entire panel. Start with controls disabled. Requires local Serial over IP with MODE 4; communication is unencrypted. Partial monitoring validation on firmware 10.3.61; arm/disarm testing pending.",
+  "headerDisplay": "<img src=\"https://raw.githubusercontent.com/fvaswani/homebridge-arrowhead-eci/main/assets/icon.png\" alt=\"Arrowhead EC-i community plug-in\" width=\"80\" height=\"80\">\n\nExperimental EC-i integration for single-area installations. Controls affect the entire panel. Start with controls disabled. Requires local Serial over IP with MODE 4; communication is unencrypted. Monitoring, Apple Home Away/Off controls, and Home/Stay arming were confirmed on one firmware 10.3.61 pilot. Alarm-trigger, tamper, and battery reporting remain unvalidated.",
   "schema": {
     "type": "object",
     "required": ["host"],
