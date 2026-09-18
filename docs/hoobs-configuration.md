@@ -35,6 +35,14 @@ The pre-icon client bundle is backed up under the pilot's
 To roll back, restore its `main.js` to `/usr/lib/hoobsd/static/main.js`, remove
 `/usr/lib/hoobsd/static/arrowhead-eci-icon.png`, and refresh the browser.
 
+The installed package at
+`/var/lib/hoobs/arrowheadalarmbridge/node_modules/homebridge-arrowhead-eci/`
+also received `assets/icon.svg`, `assets/icon.png`, and an image prefix in its
+schema's `headerDisplay`. No other schema fields were changed. Its previous
+schema is backed up as `plugin-config.schema.json` in the same backup directory.
+To undo these package-only additions, restore that schema and remove the two
+new assets. Alarm configuration and runtime JavaScript were not changed.
+
 ## PIN field
 
 HOOBS 5.1.8 ignores the schema's `format: password` when choosing its input
